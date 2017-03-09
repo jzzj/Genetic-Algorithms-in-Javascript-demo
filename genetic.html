@@ -1,0 +1,127 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+	<meta name="viewport" content="width=device-width,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+	<meta http-equiv="x-dns-prefetch-control" content="on">
+</head>
+
+<body>
+<div id="container">
+</div>
+<p><button onclick="start()">遗传算法</button></p>
+<script>
+function Gene(goal, code){
+	this.code = code || this.random(goal.length);
+	this.cost = 9999;
+}
+
+Gene.prototype = {
+	random: function(len){
+		var code = Array.from(Array(len)).map(function(item){
+			return String.fromCharCode(Math.floor(Math.random()*256));
+		}).join("");
+		this.code = code;
+		return code;
+	},
+	calcCost: function(compareTo){
+		var total = 0;
+		for(var i in this.code){
+			total += Math.pow(compareTo.charCodeAt(i) - this.code.charCodeAt(i), 2);
+		}
+		this.cost = total;
+		return total;
+	},
+	mate: function(goal, gene){
+		var pivot = Math.floor(this.code.length/2);
+		var c1 = this.code.substr(0, pivot) + gene.code.substr(pivot);
+		var c2 = gene.code.substr(0, pivot) + this.code.substr(pivot);
+		return [new Gene(goal, c1), new Gene(goal, c2)];
+	},
+	mutate: function(chance){
+		if(Math.random() > chance)
+			return;
+		var idx = Math.round(Math.random()*this.code.length);
+		var replacement = this.code[idx];
+		var upOrDown = Math.random() <= 0.5 ? -1 : 1;
+		this.code = this.code.replace(replacement, String.fromCharCode(this.code.charCodeAt(idx) + upOrDown));
+
+	}
+};
+
+function Population(goal, len){
+	this.goal = goal;
+	this.len = len;
+	this.members = Array.from(Array(len)).map(function(){return new Gene(goal)});
+	this.count = 0;
+}
+
+Population.prototype = {
+	sort: function(){
+		this.members.sort(function(a, b){
+			return a.cost - b.cost;
+		});
+	},
+	generation: function(){
+		this.sort();
+		this.count++;
+		if(true){
+			this.sort();
+			var num = 4;
+			var len = num/2;
+			for(var i=0; i<len; i++){
+			 	var children = this.members[i*2].mate(this.goal, this.members[i*2+1]);
+			 	this.members.splice(this.members.length-num, 2, children[0], children[1]);
+			 	num -= 2;
+			}
+			
+			var ret = this.members.some(function(member){
+				if(member.code === this.goal){
+					this.sort();
+					this.display();
+					setTimeout(function(){
+						alert("获得正确答案，尝试在列表中找到他吧!");
+					});
+					console.log('generate the correct answer!!!', member, this.count);
+					return true;
+				}else{
+					var c= member.calcCost(this.goal);
+					member.mutate(0.5);
+					return false;	
+				}
+			}.bind(this));
+			if(ret){
+				return false;
+			}
+		}else{
+			this.members = Array.from(Array(this.len)).map(function(){return new Gene(this.goal)}.bind(this));
+		}
+		var threshold = 50000;
+		if(this.count < threshold){
+			
+			this.display();
+			setTimeout(this.generation.bind(this));
+		}else{
+			console.log('recusive over ', threshold, ' times, get genes:', this.members);
+		}
+	},
+	display: function() {
+	    var html = '';
+	    html += ("<h2>遗传算法计算中，第: " + this.count + "次</h2>");
+	    html += ("<ul>");
+	    for (var i = 0; i < this.members.length; i++) {
+	        html += ("<li>" + this.members[i].code + " (" + this.members[i].cost + ")");
+	    }
+	    html += ("</ul>");
+	    container.innerHTML = html;
+	}
+}
+var container = document.getElementById("container");
+
+function start(){
+	var input = prompt("输入一串字符（数字和字母等，除汉字外），遗传算法会得到正确的答案，不过可能会花点时间...");
+	new Population(input, 10).generation();
+}
+
+</script>
+</body>
+</html>
